@@ -8,29 +8,38 @@ import time
 
 app = Flask(__name__)
 
-@app.route('/get-price', methods=['GET'])
-def get_price():
-    url = request.args.get('url')
-    if not url:
-        return jsonify({"error": "Missing 'url' parameter"}), 400
-
+def get_price_from_digikey(url):
     options = Options()
-    options.add_argument("--headless")
+    options.add_argument("--headless")  # browser fără fereastră
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
     driver.get(url)
-    time.sleep(5)
+    time.sleep(5)  # așteaptă să se încarce pagina
 
     try:
-        price_element = driver.find_element(By.CSS_SELECTOR, 'td.MuiTableCell-root span')
+        price_element = driver.find_element(By.CSS_SELECTOR, 'td.MuiTableCell-root.MuiTableCell-body.MuiTableCell-alignRight.MuiTableCell-sizeMedium.tss-css-fz7dy5-tableCell.mui-css-115xzy4 span')
         price = price_element.text
     except Exception as e:
-        price = "Eroare la extragere: " + str(e)
+        price = "Nu am găsit prețul: " + str(e)
 
     driver.quit()
-    return jsonify({"price": price})
+    return price
+
+@app.route("/")
+def home():
+    return "API DigiKey este activ! Folosește ruta /digikey?url=URL_PRODUS"
+
+@app.route("/digikey")
+def digikey():
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"error": "Parametrul 'url' este obligatoriu"}), 400
+
+    pret = get_price_from_digikey(url)
+    return jsonify({"price": pret})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
