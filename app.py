@@ -27,7 +27,7 @@ def get_price_from_digikey(url):
         driver.get(url)
 
         # Așteaptă elementele de preț
-        WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 20).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "td.MuiTableCell-root span"))
         )
 
