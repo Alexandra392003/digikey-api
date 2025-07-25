@@ -12,53 +12,59 @@ app = Flask(__name__)
 
 def get_price_from_digikey(url):
     options = Options()
-    options.binary_location = "/usr/bin/google-chrome-stable"  # important pe Render
-    options.add_argument("--headless")
+    options.binary_location = "/usr/bin/google-chrome"  # mai sigur decât google-chrome-stable
+    options.add_argument("--headless=new")  # mai bun pentru Chrome modern
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
     try:
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     except Exception as e:
-        print("Eroare la pornirea driverului Chrome:", e)
+        print("❌ Eroare la pornirea ChromeDriver:", e)
         return None
 
     try:
         driver.get(url)
 
-        # Așteaptă până apare elementul cu prețul, maxim 10 secunde
-        price_element = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, "td.MuiTableCell-alignRight > span"))
+        # Așteaptă elementele de preț
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "td.MuiTableCell-root span"))
         )
-        price = price_element.text
 
-        # Pentru debug, poți salva sursa paginii (optional)
-        # with open("page_source.html", "w", encoding="utf-8") as f:
-        #     f.write(driver.page_source)
+        # Găsește toate prețurile disponibile
+        price_elements = driver.find_elements(By.CSS_SELECTOR, "td.MuiTableCell-root span")
+
+        prices = [el.text for el in price_elements if el.text.strip().endswith("$") or "Lei" in el.text]
+
+        if prices:
+            return prices[0]  # returnează primul preț găsit
+        else:
+            print("⚠️ Nu s-au găsit prețuri în pagină.")
+            return None
 
     except Exception as e:
-        print("Eroare la extragerea pretului:", e)
-        price = None
+        print("❌ Eroare la extragerea prețului:", e)
+        return None
     finally:
         driver.quit()
 
-    return price
 
 @app.route("/")
 def home():
-    return "API DigiKey este activ!"
+    return "✅ Digi-Key Price Scraper este activ!"
 
 @app.route("/digikey", methods=["GET"])
 def digikey():
     url = request.args.get("url")
     if not url:
-        return jsonify({"error": "Lipseste parametrul ?url"}), 400
+        return jsonify({"error": "Lipsește parametrul ?url"}), 400
 
     price = get_price_from_digikey(url)
     if price:
         return jsonify({"price": price})
     else:
-        return jsonify({"error": "Pretul nu a putut fi extras"}), 500
+        return jsonify({"error": "Prețul nu a putut fi extras"}), 500
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
