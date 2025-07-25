@@ -14,8 +14,12 @@ def get_price_from_digikey(url):
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.binary_location = "/usr/bin/google-chrome-stable"  # important pe Render
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    try:
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    except Exception as e:
+        return None  # eroare la pornirea driverului
 
     try:
         driver.get(url)
@@ -27,7 +31,7 @@ def get_price_from_digikey(url):
         )
         price = price_element.text
     except Exception as e:
-        price = None  # Important! Nu trimitem text de eroare aici
+        price = None  # Nu întoarcem mesaj de eroare aici
     finally:
         driver.quit()
 
