@@ -1,17 +1,18 @@
+from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-import time
-import os
-from flask import Flask, request, jsonify
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+import os
 
 app = Flask(__name__)
 
 def get_price_from_digikey(url):
     options = Options()
-    options.binary_location = os.getenv("CHROME_BIN", "/usr/bin/google-chrome-stable")
+    options.binary_location = "/usr/bin/google-chrome-stable"  # important pe Render
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -24,12 +25,17 @@ def get_price_from_digikey(url):
 
     try:
         driver.get(url)
-        time.sleep(5)
-        price_element = driver.find_element(
-            By.CSS_SELECTOR,
-            'td.MuiTableCell-root.MuiTableCell-body.MuiTableCell-alignRight.MuiTableCell-sizeMedium.tss-css-fz7dy5-tableCell.mui-css-115xzy4 span'
+
+        # Așteaptă până apare elementul cu prețul, maxim 10 secunde
+        price_element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "td.MuiTableCell-alignRight > span"))
         )
         price = price_element.text
+
+        # Pentru debug, poți salva sursa paginii (optional)
+        # with open("page_source.html", "w", encoding="utf-8") as f:
+        #     f.write(driver.page_source)
+
     except Exception as e:
         print("Eroare la extragerea pretului:", e)
         price = None
